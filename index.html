@@ -1,8 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 <title>Neeru Bajwa × Touch of Elegance | Master Plan</title>
 
 <style>
@@ -89,14 +90,77 @@ body{margin:0;background:#080808;color:#fff;font-family:var(--sans);overflow-x:h
 .footer img{height:75px;width:auto;object-fit:contain;margin-bottom:15px}
 .footer p{margin:0;color:#555;font:8px var(--mono);letter-spacing:2px;text-transform:uppercase}
 @media(max-width:900px){
-  .target-date{grid-template-columns:1fr}.target-item{border-right:0;border-bottom:1px solid rgba(216,179,90,.18)}.target-item:last-child{border-bottom:0}
-  .board{padding:40px 20px;min-height:auto}.connections{display:none}
-  .card,.note,.center-target{position:relative;top:auto!important;right:auto!important;left:auto!important;margin:35px auto;transform:none!important;width:min(100%,400px)}
-  .center-target{margin-top:50px;margin-bottom:50px}.timeline{grid-template-columns:1fr}
-  .phase{border-right:0;border-bottom:1px solid rgba(216,179,90,.2)}.phase:last-child{border-bottom:0}
-  .phase:before{left:10px}.hero h1{font-size:55px}.brand-name{display:none}
+  /*
+    MOBILE = SAME CINEMATIC CANVAS
+    The desktop composition is never rearranged. The full 1450px
+    composition is simply scaled to the device width, preserving
+    the exact positions, strings, cards and target image.
+  */
+  html,body{width:100%;min-width:0;overflow-x:hidden}
+  body{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:pan-x pan-y pinch-zoom}
+
+  .mobile-canvas{
+    width:1450px;
+    transform-origin:top left;
+    transform:scale(var(--canvas-scale,1));
+  }
+
+  .topbar{
+    position:relative;
+  }
+
+  .board-wrapper{
+    padding-left:35px;
+    padding-right:35px;
+  }
+
+  /* Keep the board itself identical to desktop */
+  .board{
+    width:1450px;
+    max-width:none;
+  }
+
+  /* Preserve the cinematic hero proportions */
+  .hero{
+    width:1450px;
+    min-height:400px;
+  }
+
+  .target-date{
+    width:800px;
+    grid-template-columns:1fr 1fr 1fr;
+  }
+
+  .target-item{
+    border-right:1px solid rgba(216,179,90,.18);
+    border-bottom:0;
+  }
+
+  .timeline{
+    grid-template-columns:repeat(4,1fr);
+  }
+
+  .phase{
+    border-right:1px solid rgba(216,179,90,.2);
+    border-bottom:0;
+  }
+
+  .phase:last-child{
+    border-right:0;
+  }
+
+  .connections{
+    display:block;
+  }
+
+  /*
+    On very small screens, the canvas still remains the same composition.
+    The browser's native pinch gesture provides the "luxury zoom" experience.
+  */
 }
+
 @media print{
+{
   body{background:#fff;color:#000}.topbar{position:static}.board{box-shadow:none;border:4px solid #000}.connections{display:block}
 }
 </style>
@@ -277,23 +341,91 @@ body{margin:0;background:#080808;color:#fff;font-family:var(--sans);overflow-x:h
 </footer>
 
 <script>
-document.addEventListener("DOMContentLoaded",()=>{
-  document.querySelectorAll(".card").forEach(card=>{
-    card.addEventListener("mouseenter",()=>card.style.zIndex="50");
-    card.addEventListener("mouseleave",()=>card.style.zIndex="8");
+document.addEventListener("DOMContentLoaded", () => {
+
+  /* ---------------------------------------------------------
+     Create one fixed cinematic canvas.
+     Desktop = 1:1.
+     Mobile = exact same canvas scaled proportionally.
+     Native pinch zoom remains enabled.
+     --------------------------------------------------------- */
+
+  const body = document.body;
+
+  const canvas = document.createElement("div");
+  canvas.className = "mobile-canvas";
+
+  while (body.firstChild) {
+    canvas.appendChild(body.firstChild);
+  }
+
+  body.appendChild(canvas);
+
+  function fitCanvas() {
+    const isMobile = window.innerWidth <= 900;
+
+    if (!isMobile) {
+      canvas.style.transform = "none";
+      canvas.style.width = "100%";
+      body.style.minHeight = "";
+      return;
+    }
+
+    const designWidth = 1450;
+    const scale = Math.min(window.innerWidth / designWidth, 1);
+
+    canvas.style.setProperty("--canvas-scale", scale);
+    canvas.style.transform = `scale(${scale})`;
+    canvas.style.width = designWidth + "px";
+
+    /*
+      Reserve the scaled canvas height so there is no giant blank
+      area or clipped content after the transform.
+    */
+    requestAnimationFrame(() => {
+      const scaledHeight = canvas.scrollHeight * scale;
+      body.style.minHeight = scaledHeight + "px";
+    });
+  }
+
+  fitCanvas();
+
+  window.addEventListener("resize", fitCanvas);
+  window.addEventListener("orientationchange", () => {
+    setTimeout(fitCanvas, 100);
   });
 
-  const target=new Date("2027-10-01T00:00:00");
-  const el=document.getElementById("targetDate");
+  /* Elegant card interaction */
+  document.querySelectorAll(".card").forEach(card => {
+    card.addEventListener("mouseenter", () => card.style.zIndex = "50");
+    card.addEventListener("mouseleave", () => card.style.zIndex = "8");
+  });
 
-  function update(){
-    const diff=target-new Date();
-    if(diff<=0){el.textContent="TARGET WINDOW";return;}
-    const days=Math.floor(diff/(1000*60*60*24));
-    el.innerHTML=`OCTOBER 2027<br><small style="font:9px 'Courier New';color:#8c6827">${days} DAYS</small>`;
+  /* Countdown */
+  const target = new Date("2027-10-01T00:00:00");
+  const el = document.getElementById("targetDate");
+
+  function updateCountdown() {
+    const diff = target - new Date();
+
+    if (diff <= 0) {
+      el.textContent = "TARGET WINDOW";
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    el.innerHTML =
+      `OCTOBER 2027<br>
+       <small style="
+         font:9px 'Courier New';
+         color:#8c6827
+       ">${days} DAYS</small>`;
   }
-  update();
-  setInterval(update,3600000);
+
+  updateCountdown();
+  setInterval(updateCountdown, 3600000);
+
 });
 </script>
 
